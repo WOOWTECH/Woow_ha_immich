@@ -2,7 +2,7 @@ name: Woow Immich
 version: 2.5.6-v10
 slug: woow-immich
 description: High performance self-hosted photo and video management solution (HTTP for LAN, use Cloudflare Tunnel for HTTPS)
-url: https://immich.app
+url: https://github.com/WOOWTECH/Woow_ha_immich
 webui: "http://[HOST]:[PORT:8080]"
 arch:
   - aarch64
