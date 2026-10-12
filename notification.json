@@ -7,11 +7,11 @@
       "name": "Woow Immich",
       "version": "2.5.7",
       "repository": "WOOWTECH/Woow_ha_immich",
-      "source_sha": "3378bcd2fe9240ad9d95c33da0dd42d08bc6c450",
+      "source_sha": "b4c255c2f77c28da8190feb98668c321f088b47f",
       "source_path": "woow-immich",
       "config_file": "config.yaml",
       "config_sha256": "sha256:69e898c8daf1861728e1e3cec1e49379ba6ac7e3bfa9f6d1fb14de5880ec1362",
-      "archive_sha256": "sha256:6c5a1d7a5cc2f28c281a5e1a4c4854d7cc958f772014bbd9613b82bf2a746f64",
+      "archive_sha256": "sha256:12b9cda930909535a7cb612dc8f01f7d9cad70a669cd02f41a14014a08abaccc",
       "context_fingerprint": "sha256:f07c217f95825ee7e2fa1dfb6585f9930dc0647f3efadb7729ec39e2e6b7081b",
       "material_fingerprint": "sha256:7cb90bc365964f814dc7a0ae7d07feab045f0f24a2d14d3a96fb3fc8d786ed27",
       "architectures": [
@@ -226,7 +226,7 @@
       "images": {},
       "delivery": "local-source-build",
       "validation": "manifest+source-context+configured-CI (runtime build not certified)",
-      "publisher_run_id": "37410249410",
+      "publisher_run_id": "38209709942",
       "channel": "stable"
     }
   }
