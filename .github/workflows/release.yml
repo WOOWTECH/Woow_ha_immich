@@ -55,6 +55,12 @@ jobs:
           set -euo pipefail
           args=(--build-arg BUILD_ARCH=amd64 --build-arg "BUILD_VERSION=${VERSION}")
           [ -z "${BASE}" ] || args+=(--build-arg "BUILD_FROM=${BASE}")
+          # Supervisor also passes build.yaml's args as build arguments.
+          if [ -f "${ADDON}/build.yaml" ]; then
+            python3 -m pip install --quiet PyYAML
+            while IFS= read -r arg; do args+=(--build-arg "${arg}"); done \
+              < <(python3 -c 'import sys, yaml; [print(f"{k}={v}") for k, v in ((yaml.safe_load(open(sys.argv[1])) or {}).get("args") or {}).items()]' "${ADDON}/build.yaml")
+          fi
           docker build "${args[@]}" -t "local/${ADDON}:${VERSION}" "${ADDON}"
 
   release:
