@@ -6,6 +6,11 @@ name: WOOW addon source notification
   workflow_dispatch: {}
   schedule:
   - cron: 23 */6 * * *
+  workflow_run:
+    workflows:
+    - Release
+    types:
+    - completed
 permissions:
   contents: write
   actions: read

@@ -1,0 +1,66 @@
+name: Release
+
+# The App Store ships only published Releases of this repository (registry
+# ref_policy: release). Every push to main validates each add-on and builds
+# its amd64 image the way a Home Assistant host builds it locally; when that
+# passes, the Store's shared workflow publishes the Release for a config.yaml
+# version that has none yet. A version that is already released is left alone.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate and build ${{ matrix.addon }} (amd64)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        addon: [woow-immich]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Check the manifest
+        id: manifest
+        env:
+          ADDON: ${{ matrix.addon }}
+        run: |
+          set -euo pipefail
+          for key in name slug version arch; do
+            [ "$(yq -r ".${key} // \"\"" "${ADDON}/config.yaml")" != "" ] || { echo "::error::${ADDON}/config.yaml has no ${key}"; exit 1; }
+          done
+          yq -e '.arch[] | select(. == "amd64")' "${ADDON}/config.yaml" >/dev/null || { echo "::error::${ADDON} does not support amd64"; exit 1; }
+          echo "version=$(yq -r '.version' "${ADDON}/config.yaml")" >> "$GITHUB_OUTPUT"
+          echo "base=$(yq -r '.build_from.amd64 // ""' "${ADDON}/build.yaml")" >> "$GITHUB_OUTPUT"
+
+      - name: Build the amd64 image
+        env:
+          ADDON: ${{ matrix.addon }}
+          BASE: ${{ steps.manifest.outputs.base }}
+          VERSION: ${{ steps.manifest.outputs.version }}
+        run: |
+          set -euo pipefail
+          args=(--build-arg BUILD_ARCH=amd64 --build-arg "BUILD_VERSION=${VERSION}")
+          [ -z "${BASE}" ] || args+=(--build-arg "BUILD_FROM=${BASE}")
+          docker build "${args[@]}" -t "local/${ADDON}:${VERSION}" "${ADDON}"
+
+  release:
+    name: Release
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    uses: WOOWTECH/Woow_HA_App_Store/.github/workflows/woow-addon-release.yml@main
