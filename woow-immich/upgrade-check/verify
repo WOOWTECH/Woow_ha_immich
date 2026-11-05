@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""Upgrade test hook: check the seeded photo and album on the new version (see immich_upgrade.py)."""
+import immich_upgrade
+
+immich_upgrade.main("verify")
