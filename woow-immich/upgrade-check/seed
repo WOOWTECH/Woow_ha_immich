@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+"""Upgrade test hook: upload a photo to Immich and put it in an album on the comparison target (see immich_upgrade.py)."""
+import immich_upgrade
+
+immich_upgrade.main("seed")
