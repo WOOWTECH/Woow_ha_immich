@@ -183,6 +183,9 @@ class Client:
         """The album and the ids of the assets in it (from the album, or from a search when the album has no list)."""
         album = self.call("GET", f"/api/albums/{album_id}")
         assert isinstance(album, dict), f"album is {album!r}"[:200]
+        # The album holds only the seeded photo. Checking the count also stops a false pass when
+        # the search below ignores albumIds and lists every asset (on this server, just that photo).
+        assert album.get("assetCount") == 1, f"album {album_id} has assetCount {album.get('assetCount')!r}, not 1"
         if isinstance(album.get("assets"), list) and album["assets"]:
             return album, [str(a.get("id")) for a in album["assets"]]
         found = self.call("POST", "/api/search/metadata", {"albumIds": [album_id]})
