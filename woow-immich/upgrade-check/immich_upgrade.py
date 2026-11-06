@@ -31,6 +31,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import secrets
 import struct
 import sys
@@ -40,19 +41,38 @@ import urllib.request
 import zlib
 
 READY_TIMEOUT = 420
-# The whole hook stays inside this, so it always writes its report: the Store
-# kills a hook at hook_timeout (600 s; no settings.yaml here) before it can.
-HOOK_BUDGET = 480
-DEADLINE = time.monotonic() + HOOK_BUDGET
 STATE_FILE = "immich-seed.json"
 EMAIL = "woow-upgrade@example.com"
+
+
+def hook_timeout() -> int:
+    """The Store's hook_timeout: this directory's settings.yaml if it sets one, else the Store's default 600 s.
+
+    Only a top-level `hook_timeout: <seconds>` line is read (the hooks have no YAML library).
+    """
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.yaml"), encoding="utf-8") as f:
+            for line in f:
+                match = re.match(r"""hook_timeout\s*:\s*["']?(\d+)["']?\s*(#.*)?$""", line.rstrip())
+                if match:
+                    return int(match.group(1))
+    except OSError:
+        pass
+    return 600
+
+
+HOOK_TIMEOUT = hook_timeout()
+# The whole hook ends this far inside hook_timeout, so it always writes its
+# report before the Store kills it.
+HOOK_BUDGET = max(HOOK_TIMEOUT - 120, HOOK_TIMEOUT // 2)
+DEADLINE = time.monotonic() + HOOK_BUDGET
 
 
 def time_left(cap: float) -> float:
     """At most `cap` seconds, and no more than the hook has left; fails the check once the budget is used up."""
     left = DEADLINE - time.monotonic()
     if left < 1:
-        raise AssertionError(f"the hook's {HOOK_BUDGET} s budget is used up (hook_timeout is 600 s)")
+        raise AssertionError(f"the hook's {HOOK_BUDGET} s budget is used up (hook_timeout is {HOOK_TIMEOUT} s)")
     return min(cap, left)
 
 
