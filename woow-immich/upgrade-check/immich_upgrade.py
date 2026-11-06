@@ -40,8 +40,20 @@ import urllib.request
 import zlib
 
 READY_TIMEOUT = 420
+# The whole hook stays inside this, so it always writes its report: the Store
+# kills a hook at hook_timeout (600 s; no settings.yaml here) before it can.
+HOOK_BUDGET = 480
+DEADLINE = time.monotonic() + HOOK_BUDGET
 STATE_FILE = "immich-seed.json"
 EMAIL = "woow-upgrade@example.com"
+
+
+def time_left(cap: float) -> float:
+    """At most `cap` seconds, and no more than the hook has left; fails the check once the budget is used up."""
+    left = DEADLINE - time.monotonic()
+    if left < 1:
+        raise AssertionError(f"the hook's {HOOK_BUDGET} s budget is used up (hook_timeout is 600 s)")
+    return min(cap, left)
 
 
 def png(width: int = 16, height: int = 16) -> bytes:
@@ -71,6 +83,7 @@ class Client:
         elif auth == "key" and self.api_key:
             h["x-api-key"] = self.api_key
         req = urllib.request.Request(self.base + path, data=body, method=method, headers=h)
+        timeout = time_left(timeout)
         try:
             with self.opener.open(req, timeout=timeout) as response:
                 return response.status, response.read()
@@ -95,17 +108,20 @@ class Client:
 
     def wait_ready(self) -> str:
         """/api/server/ping until it answers pong (the server has migrated its database and listens behind nginx)."""
-        deadline = time.monotonic() + READY_TIMEOUT
+        deadline = time.monotonic() + time_left(READY_TIMEOUT)
         while True:
             code, raw = self.request("GET", "/api/server/ping", auth="", timeout=10)
             if code == 200 and b"pong" in raw:
                 return f"/api/server/ping -> pong (Immich {self.version()})"
-            if time.monotonic() > deadline:
-                raise AssertionError(f"no pong within {READY_TIMEOUT} s: last {code} {raw[:200].decode(errors='replace')}")
+            if time.monotonic() > deadline - 3:
+                raise AssertionError(f"no pong within the wait: last {code} {raw[:200].decode(errors='replace')}")
             time.sleep(3)
 
     def version(self) -> str:
-        code, raw = self.request("GET", "/api/server/version", auth="", timeout=10)
+        try:
+            code, raw = self.request("GET", "/api/server/version", auth="", timeout=10)
+        except AssertionError:  # out of time: the version is only report text
+            return "unknown"
         try:
             v = json.loads(raw) if code == 200 else {}
             return f"{v['major']}.{v['minor']}.{v['patch']}"
